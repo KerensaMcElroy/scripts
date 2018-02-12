@@ -34,4 +34,4 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
 fi
 
 mkdir -p logs/${TODAY}_copy_slurm
-mv logs/slurm/copy_%A* logs/${TODAY}_copy_slurm/
+mv logs/slurm/copy_* logs/${TODAY}_copy_slurm/

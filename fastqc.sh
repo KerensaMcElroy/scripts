@@ -10,41 +10,37 @@
 
 #--------------------------sbatch header------------------------#
 
+#SBATCH --job-name=fastqc
+#SBATCH --time=00:10:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=12
+#SBATCH --mem=1GB
+#SBATCH --output=logs/slurm/fastqc_%A_%a.out
+
 
 #------------------------project variables----------------------#
-cd ~/working
-export WORK=`pwd -P`
-export INDIR=$WORK/data/$PROJECT
-export OUTDIR=$WORK/analysis/$PROJECT/fastqc
+IN_DIR=${BIG}/data
+OUT_DIR=${BIG}/analysis/fastqc
 
 #---------------------------------------------------------------#
 
 module add fastqc
+fastqc -v >> logs/${TODAY}_main.log
+mkdir -p $OUT_DIR
 
-mkdir -p $OUTDIR
-
-IN_FILE_LIST = ( $(cut -s -f 1 ${METADATA}))
-IN_SAMP_LIST = ( $(cut -s -f 2 ${METADATA}))
+IN_FILE_LIST=( $(cut -f 1 ${METADATA}) );
 
 if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
     then
-        i=$SLURM_ARRAY_TASK_ID
-        CMD='fastqc ${IN_FILE_LIST[$i]} --noextract -f fastq -o ${OUTDIR} dosomething --input=${INFILES[$i]} --output=${SAMPLES[$i]}.result.txt
+        IN_FILE=${IN_DIR}/${IN_FILE_LIST["$SLURM_ARRAY_TASK_ID"]}
+        CMD="fastqc ${IN_FILE} --noextract -f fastq -t 1 -o ${OUT_DIR}"
+	echo -e "$CMD"
+	${CMD}
     else
         echo "Error: Missing array index as SLURM_ARRAY_TASK_ID"
 fi
 
-cat ~/scripts/fastqc.sh >> ~/$PROJECT/logs/main_${TODAY}.log
+mkdir -p $BIG/logs/${TODAY}_fastqc_slurm
+mv ${BIG}/logs/slurm/fastqc_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $BIG/logs/${TODAY}_fastqc_slurm/
 
-fastqc -v >> ~/$PROJECT/logs/main_${TODAY}.log
 
-function run_fastqc {
-    file=$1
-    CMD="fastqc $file --noextract -f fastq -o $OUTDIR"
-    echo -e "\n$CMD" >> ~/${PROJECT}/logs/main_$TODAY.log
-    $CMD
-}
-
-export -f run_fastqc
-
-ls ${INDIR}/${IN_PATH}/${SUBSET}*${EXT} | parallel -j ${CORES} run_fastqc
