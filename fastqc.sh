@@ -40,7 +40,6 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
         echo "Error: Missing array index as SLURM_ARRAY_TASK_ID"
 fi
 
-mkdir -p $BIG/logs/${TODAY}_fastqc_slurm
 mv ${BIG}/logs/slurm/fastqc_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $BIG/logs/${TODAY}_fastqc_slurm/
 
 
