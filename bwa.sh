@@ -12,16 +12,14 @@
 
 #SBATCH --job-name=bwa
 #SBATCH --time=02:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
-#SBATCH --mem=2GB
+#SBATCH --ntasks=12
+#SBATCH --mem=5GB
 #SBATCH --output=logs/slurm/bwa_%A_%a.out
 
 
 #------------------------project variables----------------------#
-IN_DIR=${BIG}/data
-OUT_DIR=${BIG}/analysis/trim
-ADAPTERS=~/adapters
+IN_DIR=${BIG}/analysis/trim
+OUT_DIR=${BIG}/analysis/bwa
 
 #---------------------------------------------------------------#
 
@@ -32,21 +30,23 @@ echo '' >> logs/${TODAY}_main.log
 
 mkdir -p $OUT_DIR
 
-IN_LIST=( $(cut -f 1 ${METADATA} | sed "s/_R[12].*//" | sort -u) );
+IN_LIST=( $(tail -n +2 ${METADATA} | cut -f 1 | sed "s/_R[12].*//" | sort -u) );
 
 if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
     then
 	    STEM=${IN_LIST["$SLURM_ARRAY_TASK_ID"]}
 	    SAMPLE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f2`
-	    SPECIES=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f6`
-	    LIBRARY=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f3`
-	    CENTRE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f4`
-	    SEQDATE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f5`
-	    UNIT=`gzip -cd $WORK/data/$PROJECT/$file | head -1 | cut -d':' -f${UNIT_RX}` 
-	    ID=`echo ${UNIT:1}_${SAMPLE}_${SPECIES} | sed s/:/_/g`
+	    SPECIES=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f5`
+            INDEX=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f3`
+	    DATE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f4`
+            LIBRARY="${INDEX}_${DATE}"
+	    CENTRE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f8`
+	    SEQDATE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f9`
+	    UNIT=`gzip -cd ${IN_DIR}/${STEM}*p.fq.gz | head -1 | cut -d':' -f${UNIT_RX}` 
+	    ID=`echo ${UNIT:1}.${INDEX} | sed s/:/./g`
 	    echo "@RG\tID:${ID}\tCN:${CENTRE}\t"` \
 	           `"DT:${SEQDATE}\tLB:${SAMPLE}_${LIBRARY}\t"` \
-	           `"PL:${PLATFORM}\tPU:${UNIT:1}\tSM:${SAMPLE}" > $OUT_DIR/${STEM}.log
+	           `"PL:${PLATFORM}\tPU:${ID}\tSM:${SAMPLE}" > $OUT_DIR/${STEM}.log
 	    if [ ! -f ${OUT_DIR}/${STEM}.sam ]
 	    then
 	        bwa mem $WORK/data/$PROJECT/${REF%.*} ${IN_DIR}${STEM}*p.fq.gz \

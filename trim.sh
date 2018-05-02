@@ -54,6 +54,7 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
             TRAILING:${BASEQUAL} \
             MINLEN:${MINLENGTH}" 
         echo -e "$CMD" > ${OUT_DIR}/${STEM}.txt
+	gzip ${OUT_DIR}/${STEM}*
         ${CMD} >> ${OUT_DIR}/${STEM}.txt 2>&1
     else
         echo "Error: Missing array index as SLURM_ARRAY_TASK_ID"
