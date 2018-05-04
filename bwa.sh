@@ -25,8 +25,10 @@ OUT_DIR=${BIG}/analysis/bwa
 
 module add bwa
 
-bwa | head -5 >> logs/${TODAY}_main.log
-echo '' >> logs/${TODAY}_main.log
+#bwa | head -5 >> logs/${TODAY}_main.log
+#echo '' >> logs/${TODAY}_main.log
+
+# run bwa on all trimmed fastq files
 
 mkdir -p $OUT_DIR
 
@@ -39,24 +41,27 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
 	    SPECIES=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f5`
             INDEX=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f3`
 	    DATE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f4`
-            LIBRARY="${INDEX}_${DATE}"
+            PLATFORM=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f10`
+	    LEFT=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f11`
+	    RIGHT=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f12`
+            LIBRARY="${SAMPLE}.${LEFT}-${RIGHT}.${DATE}"
 	    CENTRE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f8`
 	    SEQDATE=`grep "${STEM}*${READ_ONE}" $METADATA | cut -f9`
 	    UNIT=`gzip -cd ${IN_DIR}/${STEM}*p.fq.gz | head -1 | cut -d':' -f${UNIT_RX}` 
-	    ID=`echo ${UNIT:1}.${INDEX} | sed s/:/./g`
+	    ID=`echo ${UNIT}.${INDEX} | sed s/:/./g`
 	    echo "@RG\tID:${ID}\tCN:${CENTRE}\t"` \
-	           `"DT:${SEQDATE}\tLB:${SAMPLE}_${LIBRARY}\t"` \
-	           `"PL:${PLATFORM}\tPU:${ID}\tSM:${SAMPLE}" > $OUT_DIR/${STEM}.log
+	           `"DT:${SEQDATE}\tLB:${LIBRARY}\t"` \
+	           `"PL:${PLATFORM}\tPU:${UNIT}\tSM:${SAMPLE}" > $OUT_DIR/${STEM}.log
 	    if [ ! -f ${OUT_DIR}/${STEM}.sam ]
 	    then
-	        bwa mem $WORK/data/$PROJECT/${REF%.*} ${IN_DIR}${STEM}*p.fq.gz \
+	        bwa mem ${BIG}/data/${REF%.*} ${IN_DIR}/${STEM}*p.fq.gz \
 	            -t $THREADS \
 	            -k $SEED \
 	            -w $WIDTH \
 	            -r $INTERNAL \
 	            -T $SCORE \
 	            -M \
-	            -R "@RG\tID:${ID}\tCN:${CENTRE}\tDT:${SEQDATE}\tLB:${SAMPLE}_${LIBRARY}\tPL:${PLATFORM}\tPU:${UNIT:1}\tSM:${SAMPLE}" > ${OUT_DIR}/${STEM}.sam 2>> $OUT_DIR/${STEM}.log
+	            -R "@RG\tID:${ID}\tCN:${CENTRE}\tDT:${SEQDATE}\tLB:${LIBRARY}\tPL:${PLATFORM}\tPU:${UNIT}\tSM:${SAMPLE}" > ${OUT_DIR}/${STEM}.sam 2>> $OUT_DIR/${STEM}.log
 	    fi
     else
         echo "Error: Missing array index as SLURM_ARRAY_TASK_ID"
