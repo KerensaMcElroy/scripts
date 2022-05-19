@@ -13,13 +13,13 @@
 #SBATCH --job-name=picard
 #SBATCH --time=01:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=10GB
-#SBATCH --output=logs/slurm/mdup_%A_%a.out
+#SBATCH --mem=16GB
+#SBATCH --output=logs/slurm/picard_%A_%a.out
 
 
 #------------------------project variables----------------------#
-IN_DIR=${BIG}/analysis/bwa
-OUT_DIR=${BIG}/analysis/bwa/picard
+IN_DIR=${BIG}/analysis/${REF%.*}/bwa
+OUT_DIR=${IN_DIR}/picard
 
 #---------------------------------------------------------------#
 
@@ -34,34 +34,33 @@ mkdir -p ${OUT_DIR}
 
 if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
     then
-    MeanQualityByCycle \
+     STEM=${IN_LIST["$SLURM_ARRAY_TASK_ID"]}
+     java -jar -Xmx15g /apps/picard/2.9.2/picard.jar MeanQualityByCycle \
         VALIDATION_STRINGENCY=$VALIDATION \
         R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_MQBC.txt \
-        CHART_OUTPUT=$OUTDIR/${STEM}_MQBC.pdf \
+        INPUT=$IN_DIR/${STEM}.bam \
+        OUTPUT=$OUT_DIR/${STEM}_MQBC.txt \
+        CHART_OUTPUT=$OUT_DIR/${STEM}_MQBC.pdf \
         TMP_DIR=/OSM/CBR/NRCA_FINCHGENOM/temp/picard.temp \
-        MAX_RECORDS_IN_RAM=$MAX_REC 2> ${OUTDIR}/${STEM}_MQBC.log
+        MAX_RECORDS_IN_RAM=$MAX_REC 2> ${OUT_DIR}/${STEM}_MQBC.log
     wait
 
-    java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar CollectAlignmentSummaryMetrics \
-        VALIDATION_STRINGENCY=$VALIDATION \
-        LEVEL=$METRIC_LEVEL \
-        R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_CASM.txt \
-        TMP_DIR=$TMP/picard.temp \
-        MAX_RECORDS_IN_RAM=$MAX_REC 2> ${OUTDIR}/${STEM}_CASM.log
-    wait
+     java -jar -Xmx15g /apps/picard/2.9.2/picard.jar CollectAlignmentSummaryMetrics \
+         VALIDATION_STRINGENCY=SILENT \
+         MAX_RECORDS_IN_RAM=5000000 \
+         R=${BIG}/data/${REF%.*} \
+         INPUT=$IN_DIR/${STEM}_fixmate_sort.bam \
+         OUTPUT=$OUT_DIR/${STEM}_CASM.txt 2> ${OUT_DIR}/${STEM}_CASM.log
+     wait
 
     java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar QualityScoreDistribution \
         VALIDATION_STRINGENCY=$VALIDATION \
 	STEM=${IN_LIST["$SLURM_ARRAY_TASK_ID"]}
 	        VALIDATION_STRINGENCY=$VALIDATION \
         R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_QSD.txt \
-        CHART=$OUTDIR/${STEM}_QSD.pdf \
+        INPUT=$IN_DIR/${STEM}.bam \
+        OUTPUT=$OUT_DIR/${STEM}_QSD.txt \
+        CHART=$OUT_DIR/${STEM}_QSD.pdf \
         TMP_DIR=$TMP/picard.temp \
         MAX_RECORDS_IN_RAM=$MAX_REC
     wait
@@ -69,29 +68,28 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
     java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar CollectInsertSizeMetrics \
         VALIDATION_STRINGENCY=$VALIDATION \
         R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_CISM.txt \
-        HISTOGRAM_FILE=$OUTDIR/${STEM}_CISM.pdf \
+        INPUT=$IN_DIR/${STEM}.bam \
+        OUTPUT=$OUT_DIR/${STEM}_CISM.txt \
+        HISTOGRAM_FILE=$OUT_DIR/${STEM}_CISM.pdf \
         TMP_DIR=$TMP/picard.temp \
         MAX_RECORDS_IN_RAM=$MAX_REC
     wait
 
-    java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar CollectWgsMetrics \
-        VALIDATION_STRINGENCY=$VALIDATION \
-        R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_WGS.txt \
-        TMP_DIR=$TMP/picard.temp \
-        MAX_RECORDS_IN_RAM=$MAX_REC 2> ${OUTDIR}/${STEM}_WGS.log
-    wait
+     java -jar -Xmx15g /apps/picard/2.9.2/picard.jar CollectWgsMetrics \
+         VALIDATION_STRINGENCY=SILENT \
+         MAX_RECORDS_IN_RAM=5000000 \
+         R=${BIG}/data/${REF%.*} \
+         INPUT=$IN_DIR/${STEM}_fixmate_sort.bam \
+         OUTPUT=$OUT_DIR/${STEM}_WGS.txt 2> ${OUT_DIR}/${STEM}_WGS.log
+     wait
 
     java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar CollectGcBiasMetrics \
         VALIDATION_STRINGENCY=$VALIDATION \
         R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_CGcBM.txt \
-        CHART=$OUTDIR/${STEM}_CGcBM.pdf \
-        SUMMARY_OUTPUT=$OUTDIR/${STEM}_CGcBM_summary.txt \
+        INPUT=$IN_DIR/${STEM}.bam \
+        OUTPUT=$OUT_DIR/${STEM}_CGcBM.txt \
+        CHART=$OUT_DIR/${STEM}_CGcBM.pdf \
+        SUMMARY_OUTPUT=$OUT_DIR/${STEM}_CGcBM_summary.txt \
         WINDOW_SIZE=$WIN \
         TMP_DIR=$TMP/picard.temp \
         MAX_RECORDS_IN_RAM=$MAX_REC
@@ -100,8 +98,8 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
     java -jar -Xmx15g -Djava.io.tmpdir=/OSM/CBR/NRCA_FINCHGENOM/temp /apps/picard/1.138/picard.jar EstimateLibraryComplexity \
         VALIDATION_STRINGENCY=$VALIDATION \
         R=$REF \
-        INPUT=$INDIR/${STEM}.bam \
-        OUTPUT=$OUTDIR/${STEM}_ELC.txt \
+        INPUT=$IN_DIR/${STEM}.bam \
+        OUTPUT=$OUT_DIR/${STEM}_ELC.txt \
         TMP_DIR=$TMP/picard.temp \
         MAX_RECORDS_IN_RAM=$MAX_REC
 
@@ -110,6 +108,6 @@ if [ ! -z "$SLURM_ARRAY_TASK_ID" ]
         echo "Error: Missing array index as SLURM_ARRAY_TASK_ID"
 fi
 
-mv ${BIG}/logs/slurm/mdup_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $BIG/logs/${TODAY}_mdup_slurm/
+mv ${BIG}/logs/slurm/picard_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $BIG/logs/${TODAY}_picard_slurm/
 
 

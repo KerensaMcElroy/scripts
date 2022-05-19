@@ -1,0 +1,54 @@
+#!/bin/bash
+
+#***************************************************************#
+#                            genotype.sh                        #
+#                  written by Kerensa McElroy                   #
+#                          June 6, 2018                         #
+#                                                               #
+#                       run gatk's genotype gvcf		#
+#***************************************************************#
+
+#--------------------------sbatch header------------------------#
+
+#SBATCH --job-name=geno
+#SBATCH --time=05:00:00
+#SBATCH --ntasks=1
+#SBATCH --mem=40GB
+#SBATCH --output=logs/slurm/geno_%A_%a.out
+
+
+#------------------------project variables----------------------#
+IN_DIR=${BIG}/analysis/haplo
+OUT_DIR=${BIG}/analysis/geno
+
+#---------------------------------------------------------------#
+
+module add gatk/4.0.4.0
+
+#run gatk's genotypeGVCF on individual gvcf files by chromosome
+
+mkdir -p ${OUT_DIR}
+
+cd ${IN_DIR}
+
+ls *.vcf.gz > gvcf.list
+
+IN_LIST=( $(grep '>' ${BIG}/data/${REF} | cut -d'.' -f1 | cut -d'>' -f2) );
+
+gatk --java-options "-Xmx19g" CombineGVCFs \
+            -R ${BIG}/data/${REF} \
+            -L ${IN_LIST[MY_I]} \
+            --variant gvcf.list \
+            -O ${OUT_DIR}/${PROJECT}.${IN_LIST[MY_I]}.g.vcf
+        
+       # gatk --java-options "-Xmx6g" GenotypeGVCFs \
+       #     -R ${BIG}/data/${REF} \
+       #     -L ${IN_LIST[MY_I]} \
+       #     --variant ${OUT_DIR}/${PROJECT}.${IN_LIST[MY_I]}.g.vcf \
+       #     -O ${OUT_DIR}/${PROJECT}.${IN_LIST[MY_I]}.vcf \
+       #     --annotate-with-num-discovered-alleles true \
+       #     --use-new-qual-calculator
+        
+mv ${BIG}/logs/slurm/geno_${SLURM_ARRAY_JOB_ID}_${IN_LIST[MY_I]}.out $BIG/logs/${TODAY}_geno_slurm/
+
+
